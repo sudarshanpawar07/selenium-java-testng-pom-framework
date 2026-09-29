@@ -1,25 +1,33 @@
 package pages;
 
 import extensions.UIHelper;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
 
 public class LoginPage {
 
     private final WebDriver driver;
 
-    private static final By TXT_USERNAME = By.name("UserName");
-    private static final By TXT_PASSWORD = By.id("Password");
-    private static final By BTN_LOGIN = By.xpath("//button[@type='submit']");
+    @FindBy(name = "UserName")
+    private WebElement txtUsername;
+
+    @FindBy(id = "Password")
+    private WebElement txtPassword;
+
+    @FindBy(xpath = "//button[@type='submit']")
+    private WebElement btnLogin;
 
     public LoginPage(WebDriver driver) {
         this.driver = driver;
+        PageFactory.initElements(driver, this);
     }
 
-    public HomePage performLogin(String userName, String password) {
-        UIHelper.enterText(driver, TXT_USERNAME, userName);
-        UIHelper.enterText(driver, TXT_PASSWORD, password);
-        UIHelper.click(driver, BTN_LOGIN);
+    public HomePage performLogin(String username, String password) {
+        UIHelper.enterText(driver, txtUsername, username);
+        UIHelper.enterText(driver, txtPassword, password);
+        UIHelper.click(driver, btnLogin);
         return new HomePage(driver);
     }
 }

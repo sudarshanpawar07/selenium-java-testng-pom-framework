@@ -1,40 +1,42 @@
 package gettingstarted;
 
-import pages.CreateEmployeePage;
-import pages.EmployeeListPage;
-import pages.HomePage;
-import pages.LoginPage;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import pages.CreateEmployeePage;
+import pages.EmployeeListPage;
+import pages.HomePage;
+import pages.LoginPage;
 
-import java.time.Duration;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 public class EmployeeTest {
 
+    private static final String CONFIG_FILE = "config.properties";
+
     private WebDriver driver;
-    private static final String BASE_URL = "https://eaapp.somee.com/";
-    private static final String USERNAME = "admin";
-    private static final String PASSWORD = "password";
+    private String url;
+    private String username;
+    private String password;
 
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws IOException {
+        loadConfig();
         driver = new ChromeDriver();
         driver.manage().window().maximize();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-        driver.get(BASE_URL);
+        driver.get(url);
     }
 
     @AfterMethod
     public void tearDown() {
         if (driver != null) {
             driver.quit();
+            driver = null;
         }
     }
 
@@ -43,22 +45,33 @@ public class EmployeeTest {
         HomePage homePage = new HomePage(driver);
 
         LoginPage loginPage = homePage.clickLogin();
-        HomePage loggedInPage = loginPage.performLogin(USERNAME, PASSWORD);
+        HomePage loggedInPage = loginPage.performLogin(username, password);
         Assert.assertFalse(driver.getPageSource().contains("Invalid login attempt"),
                 "Login should succeed without error");
 
-        EmployeeListPage employeeListPage = loggedInPage.clickEmployeeListPage();
+        EmployeeListPage employeeListPage = loggedInPage.clickEmployeeList();
         CreateEmployeePage createEmployeePage = employeeListPage.clickCreateEmployee();
+
         String uniqueEmail = "test" + System.currentTimeMillis() + "@gmail.com";
-        createEmployeePage.createNewEmployee(
+        EmployeeListPage createdListPage = createEmployeePage.createNewEmployee(
                 "Sudarshan Pawar", "22", "50000", "20", "Junior", uniqueEmail);
 
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-        wait.until(ExpectedConditions.or(
-                ExpectedConditions.urlContains("Employee"),
-                ExpectedConditions.presenceOfElementLocated(By.tagName("table"))
-        ));
-        Assert.assertTrue(driver.getCurrentUrl().contains("Employee") || driver.findElements(By.tagName("table")).size() > 0,
+        Assert.assertTrue(createdListPage.isEmployeeListDisplayed(),
                 "Should navigate to employee list after creation");
+        Assert.assertTrue(createdListPage.isEmployeePresent(uniqueEmail),
+                "Newly created employee should appear in the list");
+    }
+
+    private void loadConfig() throws IOException {
+        Properties props = new Properties();
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE)) {
+            if (in == null) {
+                throw new IOException("Missing " + CONFIG_FILE + " on the test classpath");
+            }
+            props.load(in);
+        }
+        url = props.getProperty("url");
+        username = props.getProperty("username");
+        password = props.getProperty("password");
     }
 }
