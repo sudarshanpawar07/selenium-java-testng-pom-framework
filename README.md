@@ -122,8 +122,17 @@ fresh value on each run.
 
 ## Configuration
 
-Environment-specific values are kept out of the Java source in
-`src/test/resources/config.properties`:
+Environment-specific values are kept out of the Java source and read at runtime by
+`EmployeeTest.loadConfig()`.
+
+Two files back this up:
+
+| File                                     | Purpose                                    |
+| ---------------------------------------- | ------------------------------------------ |
+| `src/test/resources/config.properties`   | Local configuration — gitignored           |
+| `src/test/resources/config.properties.example` | Committed template with blank credentials |
+
+Supported keys:
 
 | Key           | Purpose                         |
 | ------------- | ------------------------------- |
@@ -133,11 +142,19 @@ Environment-specific values are kept out of the Java source in
 | `browser`     | Browser to run                  |
 | `emailDomain` | Domain used in generated emails |
 
-`EmployeeTest.loadConfig()` reads this file from the classpath at runtime. Targeting a
-different environment means editing only this file.
+## Getting Started
 
-Actual credential values are intentionally not documented here and should be supplied
-locally rather than committed.
+Copy the example file and add your local credentials:
+
+```bash
+cp src/test/resources/config.properties.example src/test/resources/config.properties
+```
+
+`config.properties` is gitignored and is not committed, so local credentials stay out
+of the repository. The committed example file leaves `username` and `password` empty.
+Only `url`, `browser`, and `emailDomain` carry default values.
+
+Run the suite with `mvn test` from the project root.
 
 ---
 
@@ -168,4 +185,3 @@ Individual tests can be run from the IDE:
   Chrome is currently used.
 - **`browser` is not yet read.** The configuration key exists, but the driver setup
   creates Chrome directly rather than using that value.
-- **Credentials live in a committed file.** `config.properties` is not gitignored.

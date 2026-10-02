@@ -5,3 +5,6 @@ target/
 .project
 .settings/
 .DS_Store
+
+# Local environment credentials - not committed
+src/test/resources/config.properties
