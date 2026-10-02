@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="EAEmployee Suite">
+<!--    <parameter name="userName" value="admin"/> we can use parameter for sending the data-->
+<!--    <parameter name="password" value="password"/>-->
 
-  <test name="Employee Management">
-    <classes>
-      <class name="gettingstarted.EmployeeTest"/>
-    </classes>
-  </test>
+
+    <test name="Employee Management">
+        <classes>
+            <class name="gettingstarted.EmployeeTest"/>
+        </classes>
+    </test>
 
 </suite>

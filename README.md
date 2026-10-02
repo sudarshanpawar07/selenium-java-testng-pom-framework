@@ -1,24 +1,21 @@
-# Selenium Java TestNG Framework
+# Employee Management Automation
 
-A Selenium WebDriver + TestNG automation framework, built incrementally. The target
-application is the **EA Employee Management** demo app, and the tests cover the login
-flow and employee creation.
-
-This framework is a work in progress and is being improved day by day.
+A Selenium + Java + TestNG automation framework for testing an employee management
+application. The suite covers the login flow and employee creation using the Page
+Object Model.
 
 ---
 
 ## Tech Stack
 
-| Component    | Version / Detail                          |
-| ------------ | ----------------------------------------- |
-| Java         | 17 (source/target)                        |
-| Selenium     | 4.49.0 (`selenium-java`)                  |
-| TestNG       | 7.10.2 (test scope)                       |
-| SLF4J        | 2.0.13 `slf4j-simple` (test scope)        |
-| Surefire     | 3.5.2                                     |
-| IDE          | Eclipse (Maven project)                   |
-| Build tool   | Maven 3.9                                 |
+| Component | Version / Detail         |
+| --------- | ------------------------ |
+| Java      | 17 (source/target)       |
+| Selenium  | 4.49.0 (`selenium-java`) |
+| TestNG    | 7.10.2 (test scope)      |
+| Maven     | 3.9                      |
+| Surefire  | 3.5.2                    |
+| IDE       | IntelliJ IDEA or Eclipse |
 
 ---
 
@@ -30,140 +27,145 @@ seleniumjava/
 ├── README.md
 └── src
     ├── main
-    │   ├── java
-    │   │   └── extensions/
-    │   │       ├── UIHelper.java          # Shared low-level UI actions (waits, clicks, input)
-    │   │       └── TestNGTest.java        # Scratch/experiment file (see Known Issues)
-    │   └── resources/                     # Empty
+    │   └── java/extensions/
+    │       └── UIHelper.java          # Shared UI actions: waits, clicks, text entry
     └── test
         ├── java
         │   ├── gettingstarted/
-        │   │   └── EmployeeTest.java      # The test class driven by testng.xml
-        │   └── pages/
-        │       ├── HomePage.java
-        │       ├── LoginPage.java
-        │       ├── EmployeeListPage.java
-        │       └── CreateEmployeePage.java
+        │   │   └── EmployeeTest.java  # Test class registered in testng.xml
+        │   ├── pages/                 # Page Object Model
+        │   │   ├── HomePage.java
+        │   │   ├── LoginPage.java
+        │   │   ├── EmployeeListPage.java
+        │   │   └── CreateEmployeePage.java
+        │   └── testdata/
+        │       └── EmployeeData.java  # Test data holder for employee creation
         └── resources
-            ├── config.properties          # URL, credentials, browser
-            └── testng.xml                 # TestNG suite definition
+            ├── config.properties      # URL, credentials, browser, email domain
+            └── testng.xml             # TestNG suite definition
 ```
 
-**Design:** Page Object Model. Each page object owns its locators (`@FindBy`) and
-exposes intent-named methods that return the next page object, so a test reads as a
-linear user journey with no locators leaking into it.
+Page objects own their locators via `@FindBy` and expose methods that return the next
+page object, so tests read as a linear user journey. `UIHelper` centralises the
+low-level actions (waiting, clicking, entering text) so page objects do not handle
+timing.
 
 ---
 
-## How to Run
+## Test Design
 
-```bash
-# From the project root
-mvn clean test
+`EmployeeTest` contains two tests:
+
+| Test             | Purpose                                                  |
+| ---------------- | -------------------------------------------------------- |
+| `testLogin`      | Verifies login succeeds and no error is displayed         |
+| `createEmployee` | Creates an employee and verifies it appears in the list  |
+
+Driver setup and teardown run around each test through `@BeforeMethod` and
+`@AfterMethod`.
+
+---
+
+## DataProvider
+
+Employee creation uses a TestNG `@DataProvider` so test data is defined in one place
+instead of inline in the test method. `EmployeeData` holds one employee's data.
+
+```java
+@DataProvider(name = "employeeData")
+public Object[][] employeeData() {
+    return new Object[][] {
+        { new EmployeeData(
+            "Sudarshan Pawar",
+            "22",
+            "50000",
+            "20",
+            "Junior",
+            "sudarshan"
+        )}
+    };
+}
 ```
 
-Surefire is wired to `src/test/resources/testng.xml`, so `mvn test` always runs the
-suite defined there. To run in the Eclipse IDE, right-click the test class or the
-`testng.xml` file and choose **Run As > TestNG Suite**.
+The provider supplies the method with an `EmployeeData` object:
+
+```java
+@Test(dataProvider = "employeeData")
+public void createEmployee(EmployeeData employee) { ... }
+```
+
+`EmployeeData` is immutable — final fields set through a constructor with getters only.
+Adding a row to the provider adds a new test invocation.
+
+---
+
+## Unique Email Generation
+
+The application is shared, so each created employee needs a distinct email or later
+searches would match an earlier record. The email is built at test execution time:
+
+```java
+String uniqueEmail = employee.getEmailPrefix() + "."
+        + UUID.randomUUID()
+        + "@" + emailDomain;
+```
+
+`UUID.randomUUID()` provides enough randomness that collisions are not a practical
+concern.
+
+The UUID is generated **inside the test method**, not inside the `@DataProvider`.
+Data provider methods are evaluated once when the suite starts, so a UUID created
+there would give every row the same email. Generating it in the test body produces a
+fresh value on each run.
 
 ---
 
 ## Configuration
 
-All environment-specific values live in `src/test/resources/config.properties`:
+Environment-specific values are kept out of the Java source in
+`src/test/resources/config.properties`:
 
-```properties
-url=https://eaapp.somee.com/
-username=admin
-password=password
-browser=chrome
+| Key           | Purpose                         |
+| ------------- | ------------------------------- |
+| `url`         | Application URL under test      |
+| `username`    | Login username                  |
+| `password`    | Login password                  |
+| `browser`     | Browser to run                  |
+| `emailDomain` | Domain used in generated emails |
+
+`EmployeeTest.loadConfig()` reads this file from the classpath at runtime. Targeting a
+different environment means editing only this file.
+
+Actual credential values are intentionally not documented here and should be supplied
+locally rather than committed.
+
+---
+
+## Running Tests
+
+```bash
+mvn test
 ```
 
-`EmployeeTest.loadConfig()` reads this file from the classpath at runtime, so no value
-is hardcoded in the Java source. Changing the target environment means editing only
-this file.
+Surefire is configured to use `src/test/resources/testng.xml`, so `mvn test` runs the
+suite defined there. Maven also writes its default run output under `target/`.
+
+Individual tests can be run from the IDE:
+
+- **IntelliJ IDEA** — use the gutter icons next to a `@Test` method.
+- **Eclipse** — right-click the test class or `testng.xml` and choose
+  **Run As > TestNG Suite**.
 
 ---
 
-## What Has Been Built So Far
+## Current Scope and Limitations
 
-Progress is tracked in the commit history on `main`:
-
-| Commit    | What it added                                                                |
-| --------- | ---------------------------------------------------------------------------- |
-| `1408085` | Initial Selenium automation framework setup — Maven project, TestNG, Surefire |
-| `b41261c` | Page Object Model using `@FindBy` annotations and `PageFactory`              |
-| `05f64eb` | TestNG framework improvements using various annotations                      |
-
-### Current test coverage
-
-One end-to-end test, `EmployeeTest.testLoginAndCreateEmployee()`, which:
-
-1. Launches Chrome, maximises the window, and opens the configured URL (`@BeforeMethod`)
-2. Navigates Home → Login and signs in with the configured credentials
-3. Asserts the login did **not** produce an "Invalid login attempt" error
-4. Opens the Employee List, then the Create Employee form
-5. Fills in name, age, salary, duration worked, grade (dropdown) and a unique email
-   generated from `System.currentTimeMillis()`
-6. Asserts the list page is displayed after creation
-7. Searches by that email and asserts the new record is present in the table
-8. Quits the driver in a null-guarded `@AfterMethod`
-
-### Framework decisions worth knowing
-
-- **`UIHelper` (src/main/java/extensions/UIHelper.java)** centralises every low-level
-  action so page objects never deal with timing. Every action waits for its element
-  first, using a 20 second default timeout.
-- **Waits are built from the driver, not cached.** `PageFactory` hands out lazy proxies,
-  so a `WebDriverWait` has to be created fresh from the driver on each call.
-- **Click has a JavaScript fallback.** `UIHelper.click` catches
-  `ElementClickInterceptedException` and `StaleElementReferenceException` and retries via
-  `JavascriptExecutor`, which makes clicks survive overlays and re-rendered DOM nodes.
-- **Pagination is handled explicitly.** The employee list shows 5 rows per page, so
-  `EmployeeListPage.isEmployeePresent()` filters by email before searching, and treats
-  `StaleElementReferenceException` as "not yet" inside the wait rather than a failure.
-- **Unique test data.** The email is timestamped, so the test can be run repeatedly
-  against the same shared demo instance without colliding with a previous run.
-- **Driver cleanup is defensive.** `tearDown()` null-checks before quitting, so a failure
-  during setup does not turn into a second failure during teardown.
-
----
-
-## Known Issues
-
-- **`TestNGTest.java` does not compile as written.** It has two problems:
-  1. It imports `org.testng.Test`, which is a *class*, not the annotation. The annotation
-     is `org.testng.annotations.Test`.
-  2. It lives in `src/main/java`, but TestNG is declared with `<scope>test</scope>` in
-     the pom. Test-scoped jars are not on the main compile classpath, so `org.testng.*`
-     cannot be resolved from `src/main/java` at all.
-
-  Fix: move the file under `src/test/java` and change the import to
-  `org.testng.annotations.Test`. It is currently only a scratch file.
-
-- **Credentials are committed to the repo.** `config.properties` holds a real username
-  and password and is not gitignored. For a public demo app with default credentials this
-  is low risk, but the right pattern is to keep `config.properties` local (gitignore it),
-  commit a `config.properties.example` with blanks, and pull real values from environment
-  variables or `-D` system properties in CI.
-
-- **Eclipse runtime mismatch.** `.classpath` points at a `JavaSE-11` container while
-  `pom.xml` targets Java 17. The build works from the command line, but the IDE may use a
-  different JDK than Maven does.
-
----
-
-## Next Steps
-
-Planned improvements as the framework develops:
-
-- [ ] Fix `TestNGTest.java` (move to `src/test/java`, fix the import)
-- [ ] Move credentials out of version control into environment variables / system properties
-- [ ] Align the Eclipse JDK container with the pom's Java 17
-- [ ] Add `ITestListener` / a base class to capture screenshots and logs on failure
-- [ ] Replace hardcoded `@BeforeMethod` / `@AfterMethod` driver setup with a BaseTest class
-- [ ] Add more employee lifecycle tests (edit, delete, validation errors, search edge cases)
-- [ ] Parameterise tests with TestNG `@DataProvider` instead of inline values
-- [ ] Add cross-browser execution (Firefox, Edge) via a driver factory
-- [ ] Add a Maven `testng.xml` group structure (smoke / regression) and CI integration
-- [ ] Set up reporting (Surefire reports, optionally Allure)
+- **No cleanup flow.** Created employee records remain in the application permanently,
+  so the list grows with each run. A delete or teardown step is not yet implemented.
+- **Driver setup is local to the test class.** `EmployeeTest` creates and quits its own
+  `ChromeDriver` in `@BeforeMethod` / `@AfterMethod`. There is no shared base class or
+  driver factory, so additional test classes will need to repeat this setup, and only
+  Chrome is currently used.
+- **`browser` is not yet read.** The configuration key exists, but the driver setup
+  creates Chrome directly rather than using that value.
+- **Credentials live in a committed file.** `config.properties` is not gitignored.

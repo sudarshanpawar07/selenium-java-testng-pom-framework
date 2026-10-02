@@ -5,6 +5,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.PageFactory;
+import testdata.EmployeeData;
 
 public class CreateEmployeePage {
 
@@ -43,6 +44,17 @@ public class CreateEmployeePage {
         UIHelper.enterText(driver, txtSalary, salary);
         UIHelper.enterText(driver, txtDuration, duration);
         UIHelper.selectByVisibleText(driver, drpGrade, grade);
+        UIHelper.enterText(driver, txtEmail, email);
+        UIHelper.click(driver, btnCreateEmployee);
+        return new EmployeeListPage(driver);
+    }
+
+    public EmployeeListPage createNewEmployee(EmployeeData employee, String email) {
+        UIHelper.enterText(driver, txtName, employee.getName());
+        UIHelper.enterText(driver, txtAge, employee.getAge());
+        UIHelper.enterText(driver, txtSalary, employee.getSalary());
+        UIHelper.enterText(driver, txtDuration, employee.getDuration());
+        UIHelper.selectByVisibleText(driver, drpGrade, employee.getGrade());
         UIHelper.enterText(driver, txtEmail, email);
         UIHelper.click(driver, btnCreateEmployee);
         return new EmployeeListPage(driver);
