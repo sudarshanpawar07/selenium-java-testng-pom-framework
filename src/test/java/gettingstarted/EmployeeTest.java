@@ -60,6 +60,14 @@ public class EmployeeTest {
         };
     }
 
+    /**
+     * Gives TestNG listeners access to the driver of this test instance.
+     * A listener lives in another package, so it needs a public way in.
+     */
+    public WebDriver getDriver() {
+        return driver;
+    }
+
     @Test
     public void testLogin() {
         HomePage homePage = new HomePage(driver);

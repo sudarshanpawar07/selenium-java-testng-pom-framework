@@ -9,6 +9,7 @@
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <selenium.version>4.49.0</selenium.version>
+    <allure.version>2.29.0</allure.version>
   </properties>
 
   <dependencies>
@@ -22,6 +23,15 @@
       <groupId>org.testng</groupId>
       <artifactId>testng</artifactId>
       <version>7.10.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Allure auto-registers its TestNG listener via META-INF/services,
+         so no change to testng.xml is required. -->
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-testng</artifactId>
+      <version>${allure.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -43,6 +53,29 @@
             <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
           </suiteXmlFiles>
         </configuration>
+      </plugin>
+
+      <!-- Turns allure-results/*.json into the static HTML report in
+           target/site/allure-maven-plugin. Bound to verify so `mvn test`
+           stays fast and `mvn verify` produces the report. -->
+      <plugin>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-maven</artifactId>
+        <version>2.18.0</version>
+        <configuration>
+          <!-- Allure writes results to ./allure-results by default; the plugin
+               defaults to target/allure-results, so align the two. -->
+          <resultsDirectory>${project.basedir}/allure-results</resultsDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>allure-report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

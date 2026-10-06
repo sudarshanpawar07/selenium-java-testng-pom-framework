@@ -8,3 +8,10 @@ target/
 
 # Local environment credentials - not committed
 src/test/resources/config.properties
+
+# Allure generated artifacts
+allure-results/
+.allure/
+
+# Generated screenshots
+screenshots/
